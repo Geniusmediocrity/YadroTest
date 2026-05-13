@@ -3,16 +3,18 @@ FROM ubuntu:22.04 AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get install -y ca-certificates python3 python3-venv python3-pip && \
+RUN apt-get update && apt-get install -y ca-certificates python3 python3-venv && \
 	rm -rf /var/lib/apt/lists/*
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 WORKDIR /app
 
-COPY task_1/pyproject.toml ./
+COPY task_1/pyproject.toml task_1/uv.lock ./
 
-RUN python3 -m venv .venv && .venv/bin/pip install .
+RUN uv venv .venv && uv pip install --no-cache -r pyproject.toml
 
-# === Main app ===
+# === Runtime ===
 FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive PATH="/app/.venv/bin:$PATH"
