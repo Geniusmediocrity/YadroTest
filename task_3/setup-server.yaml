@@ -17,6 +17,7 @@
           - python3
           - python3-pip
           - docker.io
+          - python3-docker
         state: present
         update_cache: yes
     - name: Starting and enabling docker
@@ -38,11 +39,6 @@
         msg: "Installed version: {{ docker_version.stdout }}"
 
     # === Working with container ===
-    - name: Installing Docker ansible-module
-      pip:
-        name: docker
-        state: present
-        executable: pip3
     - name: Building Docker-image
       docker_image:
         name: "{{ image_name }}"
