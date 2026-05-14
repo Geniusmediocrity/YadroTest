@@ -1,0 +1,75 @@
+---
+- name: Docker installing and script starting
+  hosts: targets
+  become: yes
+  vars:
+    ansible_user_name: "{{ lookup('env', 'USER') }}"
+    project_dir: "{{ playbook_dir }}/.."
+    image_name: "http-checker"
+    container_name: "http-checker-run"
+  tasks:
+    # === Docker and Packages instalation ===
+    - name: Packages Instalation
+      apt:
+        name:
+          - ca-certificates
+          - curl
+          - python3
+          - docker.io
+        state: present
+        update_cache: yes
+    - name: Starting and enabling docker
+      service:
+        name: docker
+        state: started
+        enabled: yes
+    - name: Adding user to a Docker group
+      user:
+        name: "{{ ansible_user_name }}"
+        groups: docker
+        append: yes
+    - name: Checking success of Docker instalation
+      command: docker --version
+      register: docker_version
+      changed_when: false
+    - name: Printing Docker version
+      debug:
+        msg: "Installed version: {{ docker_version.stdout }}"
+
+    # === Working with container ===
+    - name: Installing Docker ansible-module
+      pip:
+        name: docker
+        state: present
+        executable: pip3
+    - name: Building Docker-image
+      docker_image:
+        name: "{{ image_name }}"
+        build:
+          path: "{{ project_dir }}"
+          dockerfile: "{{ project_dir }}/task_2/Dockerfile"
+        source: build
+        force_source: yes
+      register: container_result
+    - name: Running Docker-container
+      docker_container:
+        name: "{{ container_name }}"
+        image: "{{ image_name }}"
+        state: started
+        detach: false
+      register: container_result
+
+    # === Checking script correctness ===
+    - name: Python-script correctness check
+      assert:
+        that:
+          - container_result.container.State.ExitCode == 0
+        fail_msg: "Error ocured in the python-script. Exit code: {{ container_result.container.State.ExitCode }}"
+        success_msg: "The script has been successfully completed"
+    - name: Running Docker-logs via ansible
+      command: docker logs {{ container_name }}
+      register: container_logs
+      changed_when: false
+    - name: Printing script-logs in console
+      debug:
+        msg: "{{ container_logs.stdout_lines + container_logs.stderr_lines }}"
