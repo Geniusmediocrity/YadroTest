@@ -1,6 +1,6 @@
 ---
 - name: Docker installing and script starting
-  hosts: loopback-hosts
+  hosts: loopback-host
   become: yes
   vars:
     ansible_user_name: "{{ lookup('env', 'USER') }}"
